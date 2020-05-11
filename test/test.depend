@@ -1,0 +1,19 @@
+# depslib dependency file v1.0
+1589215530 source:c:\users\malne\documents\studia\c++\test\src\irsensor.cpp
+	"IRSensor.h"
+
+1589214927 c:\users\malne\documents\studia\c++\test\include\irsensor.h
+
+1589216973 source:c:\users\malne\documents\studia\c++\test\main.cpp
+	<iostream>
+	<IRSensor.h>
+	<IRAlarm.h>
+
+1589217192 source:c:\users\malne\documents\studia\c++\test\src\iralarm.cpp
+	"IRAlarm.h"
+	<iostream>
+
+1589217126 c:\users\malne\documents\studia\c++\test\include\iralarm.h
+	<IRSensor.h>
+	<vector>
+
