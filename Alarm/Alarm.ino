@@ -1,58 +1,76 @@
 #include <SPI.h>
 #include <Ethernet.h>
 #include <Time.h>
-#include <TimeLib.h>
 #include <EthernetUdp.h>
 #include <NTPClient.h>
+#include <BlynkSimpleEthernet.h>
+#include <OneWire.h>
+#include <DallasTemperature.h>
 
 bool alarm = false;
 bool wlacznik = true;
+bool swiatlo = false;
+bool pastuch = false;
+bool toggleLightB = false;
 byte mac[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
-IPAddress ip(192, 168, 1, 150);
+IPAddress ip(192, 168, 1, 177);
 byte gateway[] = {192, 168, 1, 1};
 byte subnet[] = {255, 255, 255, 0};
 int port = 80;
 EthernetUDP udp;
 unsigned int localPort = 2390;
-unsigned long long alarmMillis;
-unsigned long long timeMillis;
+char auth[] = "tEKJyMzprhaA_AGYh6X7lF-oMbfW-knz";
 
-int alarmPin = 7;
-int alarmPinHigh = 2;
-int wlacznikPin = 9;
-int wlacznikPinHigh = 4;
-
+int alarmPin = 3;
+int alarmPinStatus = 2;
+int swiatloWlancznikPinIn = 4;
+int swiatloWlancznikPinOut = 5;
+int pastuchWlancznikPinIn = 6;
+int pastuchWlancznikPinOut = 7;
+int lastButtonWlacznik = 0;
+int lastButtonLight = 1;
+int lastButtonPastuch = 1;
+int activeHour = 0;
+int deactiveHour = 0;
 int x = 0;
 int y = 0;
 NTPClient timeClient(udp);
-char DEVID1[] = "v2BA5CD1D541DE2E";
-char serverName[] = "api.pushingbox.com";
 
-int days;
-int months;
-int years;
+WidgetLED ledAlarm(V0);
+WidgetLED ledWlacznik(V1);
+WidgetLED ledLight(V5);
+WidgetLED ledPastuch(V8);
 
-int hours;
-int minutes;
-int seconds;
-EthernetServer server(80);
-EthernetClient client;
+BlynkTimer timer;
+
+//OneWire oneWire(8);
+//DallasTemperature sensors(&oneWire);
 
 void setup() {
   delay(1000);
   Serial.begin(9600);
+
   pinMode(alarmPin, INPUT);
-  pinMode(wlacznikPin, INPUT);
-  pinMode(wlacznikPinHigh, OUTPUT);
-  pinMode(alarmPinHigh, OUTPUT);
+  pinMode(swiatloWlancznikPinIn, INPUT);
+  pinMode(pastuchWlancznikPinIn, INPUT);
+  pinMode(alarmPinStatus, OUTPUT);
+  pinMode(swiatloWlancznikPinOut, OUTPUT);
+  pinMode(pastuchWlancznikPinOut, OUTPUT);
+
   connectToEthernet();
+
   timeClient.begin();
   timeClient.setTimeOffset(3600 * 2);
   timeClient.update();
-  setTime(timeClient.getEpochTime());
-  server.begin();
-  setBootTime();
-  alarmMillis = millis();
+
+  Blynk.begin(auth);
+
+  timer.setInterval(1000L, sendAlarmPush);
+  timer.setInterval(60 * 60 * 1000L, sendWlacznikPush);
+  timer.setInterval(300000L, updateTime);
+  timer.setInterval(1000L, updateBlynk);
+  timer.setInterval(5000L, turnOnLights);
+  // sensors.begin();
 }
 void connectToEthernet()
 {
@@ -68,159 +86,158 @@ void connectToEthernet()
   Serial.print("Local port: ");
   Serial.println(udp.localPort());
 }
-void sendToPushingBoxPower(char devid[]) {
-  client.stop();
-
-  if (client.connect(serverName, 80)) {
-    client.print("GET /pushingbox?devid=");
-    client.print(devid);
-    client.println(" HTTP/1.1");
-    client.print("Host: ");
-    client.println(serverName);
-    client.println("User-Agent: Arduino");
-    client.println();
-
-    alarmMillis = millis() + 60000;
+BLYNK_WRITE(V2)
+{
+  activeHour = param.asInt();
+}
+BLYNK_WRITE(V3)
+{
+  deactiveHour = param.asInt();
+}
+BLYNK_WRITE(V4)
+{
+  if (lastButtonLight != param.asInt()) {
+    lastButtonLight = param.asInt();
+    toggleLight();
   }
 }
 
-void setBootTime() {
-  days = day();
-  months = month();
-  years = year();
-  hours = hour();
-  minutes = minute();
-  seconds = second();
+BLYNK_WRITE(V6)
+{
+  if (lastButtonWlacznik != param.asInt()) {
+    lastButtonWlacznik = param.asInt();
+    toggleWlacznik();
+  }
 }
-void website() {
-  EthernetClient webClient = server.available();
-  if (webClient) {
-    boolean currentLineIsBlank = true;
-    while (webClient.connected()) {
-      if (webClient.available()) {
-        char c = webClient.read();
-        if (c == '\n' && currentLineIsBlank) {
-          webClient.println("HTTP/1.1 200 OK");
-          webClient.println("Content-Type: text/html");
-          webClient.println("Connection: close");
-          webClient.println();
-          webClient.println("<!DOCTYPE HTML>");
-          webClient.println("<html>");
-          webClient.println("<meta http-equiv=\"refresh\" content=\"5\">");
-          webClient.print("<h2>Arduino UNO<br>");
-          webClient.print("<small> Czas uruchomienia: ");
-          if (days < 10) {
-            webClient.print("0");
-            webClient.print(days);
-          }
-          else {
-            webClient.print(days);
-          }
-          webClient.print(".");
-          if (months < 10) {
-            webClient.print("0");
-            webClient.print(months);
-          }
-          else {
-            webClient.print(months);
-          }
-          webClient.print(".");
-          webClient.print(years);
-
-          webClient.print(" ");
-          if (hours < 10) {
-            webClient.print("0");
-            webClient.print(hours);
-          }
-          else {
-            webClient.print(hours);
-          }
-          webClient.print(":");
-          if (minutes < 10) {
-            webClient.print("0");
-            webClient.print(minutes);
-          }
-          else {
-            webClient.print(minutes);
-          }
-          webClient.print(":");
-          if (seconds < 10) {
-            webClient.print("0");
-            webClient.print(seconds);
-          }
-          else {
-            webClient.print(seconds);
-          }
-          webClient.print("</small><br>");
-          webClient.print("<small> Aktualny czas: " + timeClient.getFormattedTime() + "</small>");
-          webClient.print("</h2><br>");
-          webClient.print("<h3>Pin 7 = ");
-          webClient.print(x);
-          webClient.println("<br>");
-          webClient.print("<h3>Pin 9 = ");
-          webClient.print(y);
-          webClient.println("<br>");
-          webClient.println("Status: ");
-          if (alarm) {
-            webClient.println("<font color=\"red\">Przerwa w ogrodzeniu!</font>");
-          } else {
-            webClient.println("<font color=\"green\">Polaczono</font>");
-          }
-          webClient.println("<br>Wlacznik: ");
-          if (!wlacznik) {
-            webClient.println("<font color=\"red\">OFF</font>");
-          } else {
-            webClient.println("<font color=\"green\">ON</font>");
-          }
-          webClient.println("</h2>");
-          webClient.print("<br><br><br><br>");
-          webClient.println("</html>");
-          break;
-        }
-        if (c == '\n') {
-          currentLineIsBlank = true;
-        }
-        else if (c != '\r') {
-          currentLineIsBlank = false;
-        }
-      }
-    }
-    delay(1);
-    webClient.stop();
+BLYNK_WRITE(V7)
+{
+  if (lastButtonPastuch != param.asInt()) {
+    lastButtonPastuch = param.asInt();
+    togglePastuch();
   }
 }
 
-
-void loop() {
-  if (timeMillis + 300000 < millis()) {
-    timeClient.update();
-    timeMillis = millis();
+void toggleLight() {
+  if (digitalRead(swiatloWlancznikPinOut)) {
+    digitalWrite(swiatloWlancznikPinOut, 0);
+  } else {
+    digitalWrite(swiatloWlancznikPinOut, 1);
   }
-  digitalWrite(alarmPinHigh, HIGH);
-  digitalWrite(wlacznikPinHigh, HIGH);
+}
+void togglePastuch() {
+
+  if (digitalRead(pastuchWlancznikPinOut)) {
+    digitalWrite(pastuchWlancznikPinOut, 0);
+  } else {
+    digitalWrite(pastuchWlancznikPinOut, 1);
+  }
+}
+void toggleWlacznik() {
+  if (wlacznik) {
+    wlacznik = false;
+  } else {
+    wlacznik = true;
+  }
+}
+void updateBlynk() {
+  Blynk.syncAll();
+  if (wlacznik) {
+    ledWlacznik.on();
+  }
+  else {
+    ledWlacznik.off();
+  }
+  if (alarm) {
+    ledAlarm.on();
+  }
+  else {
+    ledAlarm.off();
+  }
+
+  if (swiatlo) {
+    ledLight.on();
+  }
+  else {
+    ledLight.off();
+  }
+  if (pastuch) {
+    ledPastuch.on();
+  }
+  else {
+    ledPastuch.off();
+  }
+}
+
+void updateTime() {
+  timeClient.update();
+}
+
+void alarmDetection() {
+  if (wlacznik && checkHours()) {
+    digitalWrite(alarmPinStatus, HIGH);
+  } else {
+    digitalWrite(alarmPinStatus, LOW);
+  }
   x = digitalRead(alarmPin);
-  y = digitalRead(wlacznikPin);
   if (x != 1) {
     alarm = true;
   }
   else {
     alarm = false;
   }
+}
 
-  if (y != 1) {
-    wlacznik = false;
-  }
-  else {
-    wlacznik = true;
-  }
-  if (alarmMillis  < millis()) {
-    if (alarm && wlacznik) {
-      if (timeClient.getHours() >= 21  || timeClient.getHours() <= 8) {
-        sendToPushingBoxPower(DEVID1);
+void sendAlarmPush() {
+  if (alarm) {
+    if (wlacznik) {
+      if (checkHours()) {
+        Blynk.notify("Alarm");
       }
-      //alarmMillis = millis() + 60000;
     }
   }
-  website();
-  //Serial.println((unsigned int) (alarmMillis - millis()));
+}
+
+void turnOnLights() {
+  if (!swiatlo && alarm && wlacznik) {
+    toggleLight();
+  }
+}
+void sendWlacznikPush() {
+  if (!wlacznik) {
+    Blynk.notify("Powiadomienia są wyłączone");
+  }
+}
+bool checkHours() {
+
+  if (activeHour >= deactiveHour)
+  {
+    return (timeClient.getHours() >= activeHour || timeClient.getHours() < deactiveHour);
+  } else {
+    return (timeClient.getHours() >= activeHour && timeClient.getHours() < deactiveHour);
+  }
+}
+void lightControl() {
+  if (digitalRead(swiatloWlancznikPinIn)) {
+    swiatlo = true;
+  } else {
+    swiatlo = false;
+  }
+}
+void pastuchControl() {
+  if (digitalRead(pastuchWlancznikPinIn)) {
+    pastuch = true;
+  } else {
+    pastuch = false;
+  }
+}
+void loop() {
+  updateTime();
+  Blynk.run();
+  timer.run();
+  updateBlynk();
+  alarmDetection();
+  lightControl();
+  pastuchControl();
+  // Serial.print(sensors.getTempCByIndex(0));
+  // Serial.println((unsigned int) (alarmMillis - millis()));
 }
