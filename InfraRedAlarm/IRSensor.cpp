@@ -14,4 +14,16 @@ int IRSensor::getPin()
 	return this->pin;
 }
 
-
+IRSensorWithTamper::IRSensorWithTamper(): IRSensor()
+{
+	
+}
+IRSensorWithTamper::IRSensorWithTamper(int pin, int tamperPin): IRSensor(pin)
+{
+	this->tamperPin = tamperPin;
+	pinMode(tamperPin,INPUT);	
+}
+int IRSensorWithTamper::getTamperPin()
+{
+	return this->tamperPin;
+}

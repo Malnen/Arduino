@@ -9,15 +9,32 @@ class IRAlarm
         IRAlarm(int size);
 
 		void changeSensorStatus(int i,bool status);
-		void addSensor(IRSensor *sensor);
-		void execute();
+		virtual void addSensor(IRSensor *sensor);
+		virtual void execute();
 		bool alarm = false;
+    protected:
+	
+
+    private:
+		IRSensor *sensors;	
+		int next = 0;
+		int size = 0;
+};
+
+class IRAlarmWithTamper: public IRAlarm
+{
+
+    public:
+        IRAlarmWithTamper();
+        IRAlarmWithTamper(int size);
+		void execute(); 
+		void addSensor(IRSensorWithTamper *sensor);
     protected:
 
     private:
-	int next = 0;
-	int size = 0;
-	IRSensor *sensors;
+		IRSensorWithTamper *sensors;	
+		int next = 0;
+		int size = 0;
 };
 
 #endif // IRALARM_H
