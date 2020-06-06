@@ -139,33 +139,22 @@ void toggleWlacznik() {
     wlacznik = true;
   }
 }
+
+void setLed(WidgetLED led, bool b){
+  if(b){
+    led.on();
+  }
+  else{
+    led.off();
+  }
+}
+
 void updateBlynk() {
   Blynk.syncAll();
-  if (wlacznik) {
-    ledWlacznik.on();
-  }
-  else {
-    ledWlacznik.off();
-  }
-  if (alarm) {
-    ledAlarm.on();
-  }
-  else {
-    ledAlarm.off();
-  }
-
-  if (swiatlo) {
-    ledLight.on();
-  }
-  else {
-    ledLight.off();
-  }
-  if (pastuch) {
-    ledPastuch.on();
-  }
-  else {
-    ledPastuch.off();
-  }
+  setLed(ledWlacznik,wlacznik);
+  setLed(ledLight,swiatlo);
+  setLed(ledAlarm,alarm);
+  setLed(ledPastuch,pastuch);
 }
 
 void updateTime() {
@@ -231,6 +220,7 @@ void pastuchControl() {
   }
 }
 void loop() {
+  Ethernet.maintain();
   updateTime();
   Blynk.run();
   timer.run();
