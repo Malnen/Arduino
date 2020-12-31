@@ -26,7 +26,7 @@ int alarmPinStatus = 2;
 int swiatloWlancznikPinIn = 4;
 int swiatloWlancznikPinOut = 5;
 int pastuchWlancznikPinIn = 6;
-int pastuchWlancznikPinOut = 7;
+int pastuchWlancznikPinOut = 8; //7 zlamany
 int lastButtonWlacznik = 0;
 int lastButtonLight = 1;
 int lastButtonPastuch = 1;
@@ -69,7 +69,7 @@ void setup() {
   timer.setInterval(60 * 60 * 1000L, sendWlacznikPush);
   timer.setInterval(300000L, updateTime);
   timer.setInterval(1000L, updateBlynk);
-  timer.setInterval(5000L, turnOnLights);
+ // timer.setInterval(5000L, turnOnLights);
   // sensors.begin();
 }
 void connectToEthernet()
