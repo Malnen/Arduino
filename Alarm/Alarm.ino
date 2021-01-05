@@ -27,6 +27,7 @@ int swiatloWlancznikPinIn = 4;
 int swiatloWlancznikPinOut = 5;
 int pastuchWlancznikPinIn = 6;
 int pastuchWlancznikPinOut = 9; //7 8 zlamany
+int ethernetResetPin = 14;
 int lastButtonWlacznik = 0;
 int lastButtonLight = 1;
 int lastButtonPastuch = 1;
@@ -56,6 +57,7 @@ void setup() {
   pinMode(alarmPinStatus, OUTPUT);
   pinMode(swiatloWlancznikPinOut, OUTPUT);
   pinMode(pastuchWlancznikPinOut, OUTPUT);
+  pinMode(ethernetResetPin, OUTPUT);
 
   connectToEthernet();
 
@@ -69,11 +71,15 @@ void setup() {
   timer.setInterval(60 * 60 * 1000L, sendWlacznikPush);
   timer.setInterval(300000L, updateTime);
   timer.setInterval(1000L, updateBlynk);
- // timer.setInterval(5000L, turnOnLights);
+  // timer.setInterval(5000L, turnOnLights);
   // sensors.begin();
 }
 void connectToEthernet()
 {
+  digitalWrite(ethernetResetPin, LOW);
+  delay(500);
+  digitalWrite(ethernetResetPin, HIGH);
+
   Serial.println("Waiting for ethernet...");
   while (Ethernet.begin(mac) == 0) {}
   Ethernet.setLocalIP(ip);
@@ -140,21 +146,21 @@ void toggleWlacznik() {
   }
 }
 
-void setLed(WidgetLED led, bool b){
-  if(b){
+void setLed(WidgetLED led, bool b) {
+  if (b) {
     led.on();
   }
-  else{
+  else {
     led.off();
   }
 }
 
 void updateBlynk() {
   Blynk.syncAll();
-  setLed(ledWlacznik,wlacznik);
-  setLed(ledLight,swiatlo);
-  setLed(ledAlarm,alarm);
-  setLed(ledPastuch,pastuch);
+  setLed(ledWlacznik, wlacznik);
+  setLed(ledLight, swiatlo);
+  setLed(ledAlarm, alarm);
+  setLed(ledPastuch, pastuch);
 }
 
 void updateTime() {
