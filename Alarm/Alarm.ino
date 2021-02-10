@@ -21,6 +21,8 @@ EthernetUDP udp;
 unsigned int localPort = 2390;
 char auth[] = "tEKJyMzprhaA_AGYh6X7lF-oMbfW-knz";
 
+unsigned long long lastConnectionMillis = 0;
+unsigned long long reconnectTime = 120000;
 int alarmPin = 3;
 int alarmPinStatus = 2;
 int swiatloWlancznikPinIn = 4;
@@ -227,6 +229,7 @@ void pastuchControl() {
 }
 void loop() {
   Ethernet.maintain();
+
   updateTime();
   Blynk.run();
   timer.run();
@@ -236,4 +239,16 @@ void loop() {
   pastuchControl();
   // Serial.print(sensors.getTempCByIndex(0));
   // Serial.println((unsigned int) (alarmMillis - millis()));
+
+  if (!Blynk.connected()) {  
+    Blynk.connect();
+    if (millis() - lastConnectionMillis > reconnectTime) {
+      connectToEthernet();
+      lastConnectionMillis = millis();
+    }
+  }
+  else {
+    lastConnectionMillis = millis();
+  }
+  
 }
