@@ -85,7 +85,7 @@ void setup() {
   timer.setInterval(60 * 60 * 1000L, sendWlacznikPush);
   timer.setInterval(1000L, updateBlynk);
   timer.setInterval(1000L, updateTimeDisplay);
-  timer.setInterval(60000L, updateTable);
+  timer.setInterval(60 * 1000L, updateTable);
   // timer.setInterval(5000L, turnOnLights);
 }
 
@@ -120,7 +120,6 @@ void setupSD() {
   // so you have to close this one before opening another.
   alarmListFile = SD.open(fileName);
 
-  // if the file opened okay, write to it:
   if (alarmListFile) {
     sdInitialized = true;
     String temp = "";
@@ -152,7 +151,7 @@ void setupSD() {
 void connectToEthernet()
 {
   digitalWrite(ethernetResetPin, LOW);
-  delay(500);
+  delay(500);                         // reset ethernet shield
   digitalWrite(ethernetResetPin, HIGH);
 
   setupSD(); // sd card is on ethrenet shield so reinitializing
@@ -286,8 +285,8 @@ void writeToSD(String s) {
   // if the file opened okay, write to it:
   if (alarmListFile) {
     sdInitialized = true;
-    alarmListFile.println(getTimeString() + " " + getDateString() + "," + s);
-    alarmHistory.add(getTimeString() + " " + getDateString() + "," + s);
+    alarmListFile.println(getDateString() + " " + getTimeString() + "," + s);
+    alarmHistory.add(getDateString() + " " + getTimeString() + "," + s);
     if (alarmHistory.size() > historySize) {
       alarmHistory.shift();
     }
@@ -313,7 +312,6 @@ void sendWlacznikPush() {
   }
 }
 bool checkHours() {
-
   if (activeHour >= deactiveHour)
   {
     return (hour() >= activeHour || hour() < deactiveHour);
@@ -370,15 +368,13 @@ void pastuchControl() {
 }
 void loop() {
   Ethernet.maintain();
-
-  //  updateTime();
   Blynk.run();
   timer.run();
   updateBlynk();
   alarmDetection();
   lightControl();
   pastuchControl();
-  
+
   if (!Blynk.connected()) {
     Blynk.connect();
     if (millis() - lastConnectionMillis > reconnectTime) {
